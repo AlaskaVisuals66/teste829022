@@ -1,7 +1,6 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
-const fetch = require('node-fetch'); // npm install node-fetch@2
+const fetch = require('node-fetch');
 const path = require('path');
 
 const app = express();
@@ -31,6 +30,7 @@ app.post('/api/create-pix-payment', async (req, res) => {
   try {
     const { name, cpf, amount, description } = req.body;
 
+    // Validar campos obrigatórios
     if (!name || !cpf || !amount) {
       return res.status(400).json({ error: 'Nome, CPF e valor são obrigatórios' });
     }
@@ -39,16 +39,16 @@ app.post('/api/create-pix-payment', async (req, res) => {
       return res.status(400).json({ error: 'Valor mínimo é R$ 10,00' });
     }
 
-    // Gerar um hash único para o e-mail temporário
+    // Gerar e-mail temporário único
     const uniqueHash = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-    const tempEmail = `doacao+${uniqueHash}@teste.com`;
+    const tempEmail = `doacao+${uniqueHash}@example.com`;
 
     const paymentData = {
       transaction_amount: parseFloat(amount),
       description: description || 'Doação via PIX',
       payment_method_id: 'pix',
       payer: {
-        email: tempEmail, // Adiciona o e-mail temporário
+        email: tempEmail,
         first_name: name.split(' ')[0],
         last_name: name.split(' ').slice(1).join(' ') || name.split(' ')[0],
         identification: {
@@ -124,7 +124,7 @@ app.get('/verificar_status.php', async (req, res) => {
 
 // CORS global
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*"); 
+  res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
