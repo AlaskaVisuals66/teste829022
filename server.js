@@ -1,36 +1,28 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fetch = require('node-fetch'); // Certifique-se de ter instalado: npm i node-fetch@2
 const app = express();
 
 // Configurações do Mercado Pago
 const MP_ACCESS_TOKEN = 'APP_USR-3811061902338910-082020-0bf36771f9515a8eb63d82fd07e51593-2523204749';
 const MP_PUBLIC_KEY = 'APP_USR-bc332c64-3707-481f-962d-9f06525de357';
 
-app.use(cors());
+// Middlewares
+app.use(cors()); // Permite qualquer origem
 app.use(express.json());
 app.use(express.static('.'));
 
-// Servir arquivos estáticos
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// Servir páginas
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/contribuarafaela', (req, res) => res.sendFile(path.join(__dirname, 'contribuarafaela', 'index.html')));
+app.get('/contribuarafaela/pix03.html', (req, res) => res.sendFile(path.join(__dirname, 'contribuarafaela', 'pix03.html')));
 
-app.get('/contribuarafaela', (req, res) => {
-  res.sendFile(path.join(__dirname, 'contribuarafaela', 'index.html'));
-});
-
-app.get('/contribuarafaela/pix03.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'contribuarafaela', 'pix03.html'));
-});
-
-// Endpoint para criar pagamento PIX
+// Criar pagamento PIX
 app.post('/api/create-pix-payment', async (req, res) => {
   try {
-    const { name, email, cpf, phone, amount, description, offer_hash } = req.body;
-    
-    // Validações básicas
+    const { name, email, cpf, amount, description } = req.body;
+
     if (!name || !email || !cpf || !amount) {
       return res.status(400).json({ error: 'Dados obrigatórios não fornecidos' });
     }
@@ -39,7 +31,6 @@ app.post('/api/create-pix-payment', async (req, res) => {
       return res.status(400).json({ error: 'Valor mínimo é R$ 10,00' });
     }
 
-    // Criar pagamento no Mercado Pago
     const paymentData = {
       transaction_amount: parseFloat(amount),
       description: description || 'Doação via PIX',
@@ -55,8 +46,6 @@ app.post('/api/create-pix-payment', async (req, res) => {
       }
     };
 
-    console.log('Criando pagamento PIX:', paymentData);
-
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
@@ -68,17 +57,14 @@ app.post('/api/create-pix-payment', async (req, res) => {
     });
 
     const mpResponse = await response.json();
-    console.log('Resposta do Mercado Pago:', mpResponse);
 
     if (!response.ok) {
-      console.error('Erro do Mercado Pago:', mpResponse);
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Erro ao criar pagamento',
         details: mpResponse.message || 'Erro desconhecido'
       });
     }
 
-    // Retornar dados do pagamento
     res.json({
       transaction_id: mpResponse.id.toString(),
       status: mpResponse.status,
@@ -94,16 +80,13 @@ app.post('/api/create-pix-payment', async (req, res) => {
   }
 });
 
-// Endpoint para verificar status do pagamento
+// Verificar status do pagamento
 app.get('/verificar_status.php', async (req, res) => {
   try {
     const { hash } = req.query;
-    
-    if (!hash) {
-      return res.status(400).json({ error: 'Hash não fornecido' });
-    }
 
-    // Buscar pagamento no Mercado Pago
+    if (!hash) return res.status(400).json({ error: 'Hash não fornecido' });
+
     const response = await fetch(`https://api.mercadopago.com/v1/payments/${hash}`, {
       headers: {
         'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
@@ -111,13 +94,10 @@ app.get('/verificar_status.php', async (req, res) => {
       }
     });
 
-    if (!response.ok) {
-      return res.status(404).json({ error: 'Pagamento não encontrado' });
-    }
+    if (!response.ok) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
     const payment = await response.json();
-    
-    // Retornar no formato esperado pelo frontend
+
     res.json({
       status: payment.status,
       pix: {
@@ -135,6 +115,4 @@ app.get('/verificar_status.php', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`Servidor rodando na porta ${PORT}`));
