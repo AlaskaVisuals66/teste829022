@@ -39,11 +39,16 @@ app.post('/api/create-pix-payment', async (req, res) => {
       return res.status(400).json({ error: 'Valor mínimo é R$ 10,00' });
     }
 
+    // Gerar um hash único para o e-mail temporário
+    const uniqueHash = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+    const tempEmail = `doacao+${uniqueHash}@teste.com`;
+
     const paymentData = {
       transaction_amount: parseFloat(amount),
       description: description || 'Doação via PIX',
       payment_method_id: 'pix',
       payer: {
+        email: tempEmail, // Adiciona o e-mail temporário
         first_name: name.split(' ')[0],
         last_name: name.split(' ').slice(1).join(' ') || name.split(' ')[0],
         identification: {
